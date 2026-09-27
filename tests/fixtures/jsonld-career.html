@@ -1,0 +1,30 @@
+<!doctype html>
+<!-- SYNTHETIC FIXTURE for parser tests: a career page publishing schema.org JobPosting data. Not a real vacancy. -->
+<html>
+  <head>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          { "@type": "Organization", "name": "Example Bank PLC" },
+          {
+            "@type": "JobPosting",
+            "title": "Senior Officer - Application Support (Core Banking)",
+            "description": "<p>Bachelor's degree in CSE or EEE with minimum CGPA 3.00 out of 4.00.</p><ul><li>At least 3 years of experience in core banking support.</li><li>Oracle, PL/SQL and REST APIs required.</li></ul>",
+            "identifier": { "@type": "PropertyValue", "name": "Example Bank", "value": "EB-IT-2026-014" },
+            "datePosted": "2026-09-20",
+            "validThrough": "2026-10-10T23:59:59+06:00",
+            "employmentType": "FULL_TIME",
+            "hiringOrganization": { "@type": "Organization", "name": "Example Bank PLC", "sameAs": "https://bank.example" },
+            "jobLocation": { "@type": "Place", "address": { "@type": "PostalAddress", "addressLocality": "Dhaka", "addressCountry": "BD" } },
+            "baseSalary": { "@type": "MonetaryAmount", "currency": "BDT", "value": { "@type": "QuantitativeValue", "minValue": 80000, "maxValue": 110000, "unitText": "MONTH" } },
+            "experienceRequirements": { "@type": "OccupationalExperienceRequirements", "monthsOfExperience": 36 },
+            "url": "https://bank.example/careers/eb-it-2026-014"
+          }
+        ]
+      }
+    </script>
+    <script type="application/ld+json">{ this is not valid json }</script>
+  </head>
+  <body><h1>Careers</h1></body>
+</html>

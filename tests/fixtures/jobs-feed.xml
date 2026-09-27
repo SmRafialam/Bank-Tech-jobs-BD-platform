@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SYNTHETIC FIXTURE for parser tests: an RSS feed of job circulars. Not real vacancies. -->
+<rss version="2.0">
+  <channel>
+    <title>Example Jobs Feed</title>
+    <link>https://jobs.example</link>
+    <item>
+      <title>Assistant Programmer - Example State Bank PLC</title>
+      <link>https://jobs.example/circular/1001?utm_source=rss</link>
+      <guid>circular-1001</guid>
+      <pubDate>Sat, 26 Sep 2026 10:00:00 +0600</pubDate>
+      <category>ICT</category>
+      <description><![CDATA[<p>BSc in CSE/EEE/ICT. No third division/class in any examination. Age: maximum 30 years. Application deadline: 15 October 2026.</p>]]></description>
+    </item>
+    <item>
+      <title>Result of written examination for Senior Officer (General) - Example State Bank PLC</title>
+      <link>https://jobs.example/notice/77</link>
+      <guid>notice-77</guid>
+      <description>Result notice</description>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,550 @@
+// BankTech Jobs BD — database schema
+// Prisma 7: the connection URL lives in prisma.config.ts, the client uses @prisma/adapter-pg.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrgType {
+  PUBLIC_BANK
+  PRIVATE_BANK
+  FOREIGN_BANK
+  NBFI
+  FINTECH
+  GOVERNMENT
+}
+
+enum JobCategory {
+  SOFTWARE_DEVELOPMENT
+  APPLICATION_SUPPORT
+  IT_INFRASTRUCTURE
+  NETWORK
+  DATABASE
+  CYBERSECURITY
+  DATA_BI
+  QA_TESTING
+  CLOUD_DEVOPS
+  DIGITAL_BANKING
+  CARDS_PAYMENTS
+  IT_AUDIT_GOVERNANCE
+  MIS_REPORTING
+  GENERAL_IT_OFFICER
+  MANAGEMENT_TRAINEE_TECH
+}
+
+enum JobLevel {
+  TRAINEE
+  ENTRY
+  MID
+  SENIOR
+  LEAD
+  EXECUTIVE
+}
+
+enum EmploymentType {
+  FULL_TIME
+  CONTRACT
+  PART_TIME
+  INTERNSHIP
+}
+
+enum WorkMode {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+enum JobStatus {
+  NEW
+  OPEN
+  CLOSING_SOON
+  EXPIRED
+  REMOVED
+  UNVERIFIED
+}
+
+enum ReviewStatus {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+enum CollectionMethod {
+  HTML
+  RSS
+  JSON_API
+  JSON_LD
+  PLAYWRIGHT
+  MANUAL
+}
+
+enum RunStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+  SKIPPED
+}
+
+enum DuplicateStatus {
+  PENDING
+  MERGED
+  DISMISSED
+}
+
+enum Verdict {
+  STRONG
+  POSSIBLE
+  WEAK
+  NOT_ELIGIBLE
+  MANUAL_REVIEW
+}
+
+enum ApplicationStatus {
+  NOT_APPLIED
+  PLANNING
+  APPLIED
+  ASSESSMENT
+  WRITTEN_TEST
+  INTERVIEW
+  FINAL_INTERVIEW
+  OFFERED
+  REJECTED
+  WITHDRAWN
+}
+
+enum AlertMode {
+  IMMEDIATE
+  DAILY_DIGEST
+}
+
+enum NotificationType {
+  NEW_JOB
+  HIGH_PRIORITY
+  JOB_UPDATED
+  DEADLINE_REMINDER
+  CLOSING_SOON
+  DIGEST
+  SYSTEM
+}
+
+enum Channel {
+  IN_APP
+  EMAIL
+  TELEGRAM
+  PUSH
+}
+
+enum DeliveryStatus {
+  SENT
+  LOGGED
+  SKIPPED
+  FAILED
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+// ───────────────────────────── Users ─────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile           CandidateProfile?
+  preference        NotificationPreference?
+  savedJobs         SavedJob[]
+  applications      Application[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
+  matches           MatchResult[]
+  submittedJobs     Job[]              @relation("SubmittedJobs")
+  reports           JobReport[]
+  auditLogs         AuditLog[]
+}
+
+model CandidateProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName           String?
+  location           String?
+  degree             String? // e.g. "BSc"
+  discipline         String? // e.g. "Computer Science and Engineering"
+  university         String?
+  graduationYear     Int?
+  bachelorCgpa       Float?
+  cgpaScale          Float    @default(4)
+  hasMasters         Boolean  @default(false)
+  mastersDiscipline  String?
+  mastersCgpa        Float?
+  sscGpa             Float?
+  hscGpa             Float?
+  hasThirdDivision   Boolean  @default(false)
+  experienceYears    Float?
+  bankingExperience  Boolean  @default(false)
+  skills             String[]
+  primaryFocus       String? // e.g. "software", "infrastructure"
+  preferredRoles     String[]
+  preferredOrgSlugs  String[]
+  preferredLocations String[]
+  openToRemote       Boolean  @default(true)
+  minExpectedSalary  Int?
+  age                Int?
+  certifications     String[]
+  currentEmployer    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model NotificationPreference {
+  id                String        @id @default(cuid())
+  userId            String        @unique
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categories        JobCategory[]
+  organizationSlugs String[]
+  orgTypes          OrgType[]
+  minMatchScore     Int           @default(45)
+  locations         String[]
+  levels            JobLevel[]
+  academicOnly      Boolean       @default(true) // skip jobs the user is explicitly not eligible for
+  mode              AlertMode     @default(IMMEDIATE)
+  emailEnabled      Boolean       @default(true)
+  telegramEnabled   Boolean       @default(false)
+  telegramChatId    String?
+  pushEnabled       Boolean       @default(false)
+  deadlineReminders Boolean       @default(true)
+  closingSoonAlerts Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+// ───────────────────────────── Organisations & sources ─────────────────────────────
+
+model Organization {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  name       String
+  shortName  String?
+  type       OrgType
+  website    String?
+  careersUrl String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  jobs    Job[]
+  sources Source[]
+}
+
+model Source {
+  id                   String           @id @default(cuid())
+  key                  String           @unique
+  name                 String
+  url                  String
+  method               CollectionMethod
+  adapter              String // adapter id in the registry
+  enabled              Boolean          @default(true)
+  fetchIntervalMinutes Int              @default(120)
+  complianceNote       String?
+  config               Json?
+  organizationId       String?
+  organization         Organization?    @relation(fields: [organizationId], references: [id])
+  lastRunAt            DateTime?
+  lastSuccessAt        DateTime?
+  lastError            String?
+  consecutiveFailures  Int              @default(0)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  runs  SourceRun[]
+  links JobSourceLink[]
+}
+
+model SourceRun {
+  id          String    @id @default(cuid())
+  sourceId    String
+  source      Source    @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  status      RunStatus @default(RUNNING)
+  trigger     String    @default("schedule")
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  durationMs  Int?
+  itemsFound  Int       @default(0)
+  jobsCreated Int       @default(0)
+  jobsUpdated Int       @default(0)
+  jobsMerged  Int       @default(0)
+  jobsSkipped Int       @default(0)
+  parseErrors Int       @default(0)
+  message     String?
+  errors      Json?
+
+  @@index([sourceId, startedAt])
+}
+
+// ───────────────────────────── Jobs ─────────────────────────────
+
+model Job {
+  id               String          @id @default(cuid())
+  slug             String          @unique
+  title            String
+  normalizedTitle  String
+  organizationId   String
+  organization     Organization    @relation(fields: [organizationId], references: [id])
+  department       String?
+  category         JobCategory
+  secondaryCategories JobCategory[]
+  level            JobLevel?
+  summary          String
+  responsibilities String[]
+  requiredSkills   String[]
+  preferredSkills  String[]
+
+  // Requirements — null means "not specified" (never treated as satisfied)
+  educationDisciplines String[]
+  disciplineNote       String?
+  minCgpa              Float?
+  sscHscRequirement    String?
+  minSscGpa            Float?
+  minHscGpa            Float?
+  mastersRequired      Boolean?
+  noThirdDivision      Boolean?
+  minExperienceYears   Float?
+  maxExperienceYears   Float?
+  ageLimit             Int?
+  bankingExperiencePreferred Boolean @default(false)
+  requirementsParsed   Boolean @default(false)
+
+  location        String?
+  workMode        WorkMode       @default(ONSITE)
+  employmentType  EmploymentType @default(FULL_TIME)
+  salary          String?
+  vacancies       Int?
+  publishedAt     DateTime?
+  deadline        DateTime?
+  applicationUrl  String?
+  sourceName      String
+  sourceUrl       String
+  sourceJobId     String?
+  firstDiscoveredAt DateTime     @default(now())
+  lastVerifiedAt  DateTime       @default(now())
+  missingRuns     Int            @default(0)
+  status          JobStatus      @default(NEW)
+  reviewStatus    ReviewStatus   @default(APPROVED)
+  contentHash     String
+  fingerprint     String
+  isDemo          Boolean        @default(false)
+  archivedAt      DateTime?
+  submittedById   String?
+  submittedBy     User?          @relation("SubmittedJobs", fields: [submittedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  links         JobSourceLink[]
+  savedBy       SavedJob[]
+  applications  Application[]
+  matches       MatchResult[]
+  notifications Notification[]
+  reports       JobReport[]
+  duplicatesA   DuplicateCandidate[] @relation("DupJob")
+  duplicatesB   DuplicateCandidate[] @relation("DupCandidate")
+
+  @@index([status, deadline])
+  @@index([organizationId])
+  @@index([category])
+  @@index([fingerprint])
+  @@index([contentHash])
+  @@index([applicationUrl])
+  @@index([firstDiscoveredAt])
+}
+
+model JobSourceLink {
+  id          String   @id @default(cuid())
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  sourceId    String?
+  source      Source?  @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  sourceName  String
+  sourceUrl   String
+  sourceJobId String?
+  externalKey String   @unique // `${sourceKey}:${sourceJobId ?? normalizedUrl}`
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  @@index([jobId])
+}
+
+model DuplicateCandidate {
+  id             String          @id @default(cuid())
+  jobId          String
+  job            Job             @relation("DupJob", fields: [jobId], references: [id], onDelete: Cascade)
+  candidateJobId String
+  candidateJob   Job             @relation("DupCandidate", fields: [candidateJobId], references: [id], onDelete: Cascade)
+  score          Float
+  reasons        String[]
+  status         DuplicateStatus @default(PENDING)
+  createdAt      DateTime        @default(now())
+  resolvedAt     DateTime?
+
+  @@unique([jobId, candidateJobId])
+}
+
+model MatchResult {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId      String
+  job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  verdict    Verdict
+  score      Int
+  reasons    Json
+  computedAt DateTime @default(now())
+
+  @@unique([userId, jobId])
+  @@index([userId, score])
+}
+
+// ───────────────────────────── Candidate activity ─────────────────────────────
+
+model SavedJob {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, jobId])
+}
+
+model Application {
+  id            String            @id @default(cuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId         String
+  job           Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status        ApplicationStatus @default(PLANNING)
+  appliedAt     DateTime?
+  examDate      DateTime?
+  interviewDate DateTime?
+  followUpAt    DateTime?
+  cvVersion     String?
+  coverLetter   String?
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([userId, jobId])
+}
+
+// ───────────────────────────── Notifications ─────────────────────────────
+
+model Notification {
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId         String?
+  job           Job?             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  type          NotificationType
+  title         String
+  body          String
+  url           String?
+  priority      Boolean          @default(false)
+  dedupeKey     String           @unique
+  digestPending Boolean          @default(false)
+  readAt        DateTime?
+  createdAt     DateTime         @default(now())
+
+  deliveries NotificationDelivery[]
+
+  @@index([userId, createdAt])
+}
+
+model NotificationDelivery {
+  id             String         @id @default(cuid())
+  notificationId String?
+  notification   Notification?  @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  userId         String?
+  channel        Channel
+  status         DeliveryStatus
+  target         String?
+  error          String?
+  createdAt      DateTime       @default(now())
+
+  @@index([createdAt])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
+
+// ───────────────────────────── Moderation & ops ─────────────────────────────
+
+model JobReport {
+  id        String       @id @default(cuid())
+  jobId     String
+  job       Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  reason    String
+  details   String?
+  status    ReportStatus @default(OPEN)
+  createdAt DateTime     @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String?
+  entityId  String?
+  meta      Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model TaskRun {
+  id         String    @id @default(cuid())
+  task       String
+  trigger    String
+  status     RunStatus @default(RUNNING)
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  message    String?
+
+  @@index([task, startedAt])
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

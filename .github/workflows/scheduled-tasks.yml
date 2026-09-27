@@ -1,0 +1,44 @@
+# Alternative scheduler when platform cron is insufficient (e.g. Vercel Hobby only allows daily crons).
+# Calls the deployed app's protected /api/cron/* endpoints. Configure repository secrets APP_URL and CRON_SECRET.
+# Note: GitHub cron is UTC; 02:00 UTC = 08:00 Asia/Dhaka.
+name: Scheduled tasks
+
+on:
+  schedule:
+    - cron: "5 * * * *" # collect (hourly; each source still respects its own interval)
+    - cron: "*/30 * * * *" # reminders
+    - cron: "30 18 * * *" # verify-deadlines (00:30 Dhaka)
+    - cron: "0 21 * * *" # cleanup (03:00 Dhaka)
+    - cron: "0 2 * * *" # digest (08:00 Dhaka)
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Task to run
+        required: true
+        type: choice
+        options: [collect, reminders, verify-deadlines, cleanup, digest]
+
+permissions: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Resolve task
+        id: task
+        run: |
+          case "${{ github.event.schedule }}" in
+            "5 * * * *") echo "name=collect" >> "$GITHUB_OUTPUT" ;;
+            "*/30 * * * *") echo "name=reminders" >> "$GITHUB_OUTPUT" ;;
+            "30 18 * * *") echo "name=verify-deadlines" >> "$GITHUB_OUTPUT" ;;
+            "0 21 * * *") echo "name=cleanup" >> "$GITHUB_OUTPUT" ;;
+            "0 2 * * *") echo "name=digest" >> "$GITHUB_OUTPUT" ;;
+            *) echo "name=${{ inputs.task }}" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Call cron endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail-with-body -sS -X POST -H "Authorization: Bearer ${CRON_SECRET}" "${APP_URL%/}/api/cron/${{ steps.task.outputs.name }}"

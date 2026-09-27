@@ -26,7 +26,8 @@
     "collect": "tsx scripts/run-task.ts collect",
     "task": "tsx scripts/run-task.ts",
     "vapid": "tsx scripts/generate-vapid.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

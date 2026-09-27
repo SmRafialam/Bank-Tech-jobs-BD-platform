@@ -234,8 +234,9 @@ Three ways to run these:
 
 1. **Worker (recommended on a VPS/Docker):** `npm run worker`. It reads `CRON_*`, merges overrides saved in `/admin/sources`, and reloads
    them every 5 minutes.
-2. **Vercel Cron:** [vercel.json](vercel.json) calls `/api/cron/<task>` with `Authorization: Bearer $CRON_SECRET`. Vercel cron schedules
-   are UTC; the file already converts from Dhaka. Hobby plans allow only daily crons, so use option 3 for the frequent tasks.
+2. **Vercel Cron:** [vercel.json](vercel.json) calls `/api/cron/<task>` once a day each (Hobby-plan compatible; schedules are UTC,
+   already converted from Dhaka). For hourly collection and 30-minute reminders add option 3, or tighten the schedules on a Pro plan.
+   `npm run vercel-build` applies pending migrations before each build.
 3. **GitHub Actions:** [.github/workflows/scheduled-tasks.yml](.github/workflows/scheduled-tasks.yml) calls the same endpoints. Set
    repository secrets `APP_URL` and `CRON_SECRET`.
 

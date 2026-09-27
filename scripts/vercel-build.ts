@@ -10,8 +10,10 @@ function run(cmd: string) {
   execSync(cmd, { stdio: "inherit" });
 }
 
-const appUrl = process.env.DATABASE_URL;
-const directUrl = process.env.DIRECT_URL || process.env.DATABASE_URL_UNPOOLED || appUrl;
+const appUrl = process.env.DATABASE_URL || process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL;
+const directUrl = process.env.DIRECT_URL || process.env.DATABASE_URL_UNPOOLED || process.env.POSTGRES_URL_NON_POOLING || appUrl;
+// Make the resolved URL visible to child processes (prisma, seed) that read DATABASE_URL.
+if (appUrl) process.env.DATABASE_URL = appUrl;
 
 const missing: string[] = [];
 if (!appUrl) missing.push("DATABASE_URL (Neon pooled connection string)");

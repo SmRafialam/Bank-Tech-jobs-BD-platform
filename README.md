@@ -263,17 +263,17 @@ Nginx in front of `web`.
 
 1. Push the repo to GitHub, then in Vercel: **Add New → Project → Import** the repository (framework: Next.js; build command comes from vercel.json).
 2. In the project: **Storage → Create Database → Neon** (or connect an existing Neon project). The integration sets
-    (pooled — used by the app) and  (direct — used by Prisma migrations) automatically.
-   Using Neon without the integration? Set  to the **pooled** string (host contains , )
-   and  to the direct string.
-3. **Settings → Environment Variables:** , ,  (your https://…vercel.app URL),
-   , , , , and for the first deploy .
-   Optional: , , Telegram and VAPID keys, Upstash.
-4. **Deploy.**  runs , seeds when , then .
-   After the first successful deploy you can set  (re-seeding is harmless: it never overwrites admin changes).
+   `DATABASE_URL` (pooled — used by the app) and `DATABASE_URL_UNPOOLED` (direct — used by Prisma migrations) automatically.
+   Using Neon without the integration? Set `DATABASE_URL` to the **pooled** string (host contains `-pooler`, ends with
+   `?sslmode=require`) and `DIRECT_URL` to the direct string.
+3. **Settings → Environment Variables:** `AUTH_SECRET`, `CRON_SECRET`, `APP_URL` (your `https://…vercel.app` URL),
+   `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_DEMO_EMAIL`, `SEED_DEMO_PASSWORD`, and for the first deploy `SEED_ON_BUILD=true`.
+   Optional: `RESEND_API_KEY`, `EMAIL_FROM`, Telegram and VAPID keys, Upstash.
+4. **Deploy.** `npm run vercel-build` runs `prisma migrate deploy`, seeds when `SEED_ON_BUILD=true`, then `next build`.
+   After the first successful deploy you can set `SEED_ON_BUILD=false` (re-seeding is harmless: it never overwrites admin changes).
 5. Crons in [vercel.json](vercel.json) run daily (Hobby limit). For hourly collection and 30-minute reminders enable
-   [.github/workflows/scheduled-tasks.yml](.github/workflows/scheduled-tasks.yml) with repository secrets  and .
-6. **Playwright sources must not run on Vercel** — keep  there and run the worker image on a VPS if needed.
+   [.github/workflows/scheduled-tasks.yml](.github/workflows/scheduled-tasks.yml) with repository secrets `APP_URL` and `CRON_SECRET`.
+6. **Playwright sources must not run on Vercel** — keep `PLAYWRIGHT_ENABLED=false` there and run the worker image on a VPS if needed.
 
 **Option B: a single VPS with Docker Compose** (above). Back up the `pgdata` volume, and put TLS and HTTP/2 in front.
 

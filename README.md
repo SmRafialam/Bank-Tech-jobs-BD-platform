@@ -259,16 +259,21 @@ Nginx in front of `web`.
 
 ## Production deployment
 
-**Option A: Vercel + managed Postgres + GitHub Actions/VPS for browsers**
+**Option A: Vercel + Neon (recommended)**
 
-1. Create a Neon or Supabase Postgres database. Use the pooled connection string for `DATABASE_URL`, and run
-   `npx prisma migrate deploy` from CI or your machine with the direct URL.
-2. Import the repo into Vercel and set the environment variables (`AUTH_SECRET`, `APP_URL`, `CRON_SECRET`, …).
-3. Use [vercel.json](vercel.json) crons (Pro) or the GitHub Actions scheduler (Hobby).
-4. HTML/RSS/JSON-LD collectors run fine inside the `/api/cron/collect` function (`maxDuration` is 300 s). **Playwright sources must
-   not run on Vercel.** Keep `PLAYWRIGHT_ENABLED=false` there and run the worker image on a small VPS or Fly.io machine, or run
-   `npm run task collect` from a GitHub Actions job after `npx playwright install --with-deps chromium`.
-5. Optional: Upstash Redis for shared rate limits across serverless instances.
+1. Push the repo to GitHub, then in Vercel: **Add New → Project → Import** the repository (framework: Next.js; build command comes from vercel.json).
+2. In the project: **Storage → Create Database → Neon** (or connect an existing Neon project). The integration sets
+    (pooled — used by the app) and  (direct — used by Prisma migrations) automatically.
+   Using Neon without the integration? Set  to the **pooled** string (host contains , )
+   and  to the direct string.
+3. **Settings → Environment Variables:** , ,  (your https://…vercel.app URL),
+   , , , , and for the first deploy .
+   Optional: , , Telegram and VAPID keys, Upstash.
+4. **Deploy.**  runs , seeds when , then .
+   After the first successful deploy you can set  (re-seeding is harmless: it never overwrites admin changes).
+5. Crons in [vercel.json](vercel.json) run daily (Hobby limit). For hourly collection and 30-minute reminders enable
+   [.github/workflows/scheduled-tasks.yml](.github/workflows/scheduled-tasks.yml) with repository secrets  and .
+6. **Playwright sources must not run on Vercel** — keep  there and run the worker image on a VPS if needed.
 
 **Option B: a single VPS with Docker Compose** (above). Back up the `pgdata` volume, and put TLS and HTTP/2 in front.
 

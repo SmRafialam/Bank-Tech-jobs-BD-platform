@@ -8,7 +8,9 @@ function createClient() {
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set. Copy .env.example to .env and configure PostgreSQL.");
   }
-  const adapter = new PrismaPg({ connectionString });
+  // Small pool per instance: on serverless (Vercel) each function instance holds its own pool,
+  // and Neon's pooler (PgBouncer) multiplexes them.
+  const adapter = new PrismaPg({ connectionString, max: process.env.VERCEL ? 3 : 10 });
   return new PrismaClient({ adapter, log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"] });
 }
 

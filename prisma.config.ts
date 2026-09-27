@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
+import { directDatabaseUrl } from "./src/lib/database-url";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -8,15 +9,9 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    // Prisma CLI (migrate/seed) should use a direct, unpooled connection. On Neon that is DATABASE_URL_UNPOOLED
-    // (set by the Vercel ↔ Neon integration) or DIRECT_URL; the app itself uses the pooled DATABASE_URL.
-    // `prisma generate` (run by `npm install`) never connects, so a placeholder keeps fresh clones installable.
-    url:
-      process.env.DIRECT_URL ||
-      process.env.DATABASE_URL_UNPOOLED ||
-      process.env.POSTGRES_URL_NON_POOLING ||
-      process.env.DATABASE_URL ||
-      process.env.POSTGRES_URL ||
-      "postgresql://placeholder:placeholder@localhost:5432/placeholder",
+    // Prisma CLI (migrate/seed) uses the direct, unpooled connection (Neon: DATABASE_URL_UNPOOLED / DIRECT_URL);
+    // the app uses the pooled one. `prisma generate` (run by `npm install`) never connects, so a placeholder
+    // keeps fresh clones installable before .env exists.
+    url: directDatabaseUrl() ?? "postgresql://placeholder:placeholder@localhost:5432/placeholder",
   },
 });
